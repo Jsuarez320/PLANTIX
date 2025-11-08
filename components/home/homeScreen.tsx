@@ -1,6 +1,6 @@
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { supabase } from '../../lib/supabase'
 
 type Props = {
@@ -8,23 +8,37 @@ type Props = {
 }
 
 export default function HomeScreen({ email }: Props) {
-  const displayName = React.useMemo(() => {
-    if (!email) return 'Usuario'
-    const local = email.split('@')[0]
-    return local.charAt(0).toUpperCase() + local.slice(1)
+  const [displayName, setDisplayName] = React.useState<string>('Usuario')
+
+  React.useEffect(() => {
+    const getUserName = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user?.user_metadata?.name) {
+          setDisplayName(user.user_metadata.name)
+        } else if (email) {
+          // Fallback: usar el email si no hay nombre
+          const local = email.split('@')[0]
+          setDisplayName(local.charAt(0).toUpperCase() + local.slice(1))
+        }
+      } catch (error) {
+        console.error('Error obteniendo nombre de usuario:', error)
+        // Fallback: usar el email si hay error
+        if (email) {
+          const local = email.split('@')[0]
+          setDisplayName(local.charAt(0).toUpperCase() + local.slice(1))
+        }
+      }
+    }
+    getUserName()
   }, [email])
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>Hola {displayName}!</Text>
-            <Text style={styles.subtitle}>Explora tus plantas y su estado actual</Text>
-          </View>
-          <TouchableOpacity style={styles.logout} onPress={() => supabase.auth.signOut()}>
-            <Text style={styles.logoutText}>Cerrar sesión</Text>
-          </TouchableOpacity>
+          <Text style={styles.greeting}>Hola {displayName}!</Text>
+          <Text style={styles.subtitle}>Explora tus plantas y su estado actual</Text>
         </View>
 
         <View style={styles.summaryCard}>
@@ -68,10 +82,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 12,
     paddingBottom: 8,
   },
   greeting: {
@@ -82,20 +92,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 4,
     color: '#6B7280',
-  },
-  logout: {
-    paddingHorizontal: 12,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  logoutText: {
-    color: '#111827',
-    fontWeight: '600',
   },
   summaryCard: {
     marginTop: 16,

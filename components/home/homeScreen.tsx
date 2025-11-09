@@ -85,6 +85,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   greeting: {
+    marginTop: 12,
     fontSize: 28,
     fontWeight: '800',
     color: '#111827',

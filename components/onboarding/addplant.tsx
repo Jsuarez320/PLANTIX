@@ -23,7 +23,7 @@ export default function addplant({ onSkip, onContinue }: Props) {
             </View>
 
             <View style={styles.content}>
-                <Text style={styles.title}>Agrega tu cultivos</Text>
+                <Text style={styles.title}>Agrega tu cultivo</Text>
 
                 <View style={styles.row}>
                     <Image source={require("../../assets/img/onboarding/task.png")} style={styles.icon} />

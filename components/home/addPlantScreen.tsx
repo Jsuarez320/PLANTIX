@@ -12,23 +12,33 @@ const plants: Plant[] = [
   {
     id: '1',
     name: 'Lechuga',
-    image: require('../../assets/img/plant.png'),
+    image: require('../../assets/img/addPlant/lettuce.png'),
   },
   {
     id: '2',
-    name: 'Frijol',
-    image: require('../../assets/img/plant.png'),
+    name: 'Zanahoria',
+    image: require('../../assets/img/addPlant/carrot.png'),
   },
   {
     id: '3',
-    name: 'Tomate',
-    image: require('../../assets/img/plant.png'),
+    name: 'Fresas',
+    image: require('../../assets/img/addPlant/strawberry.png'),
   },
   {
     id: '4',
-    name: 'Zanahoria',
-    image: require('../../assets/img/plant.png'),
+    name: 'Acelga',
+    image: require('../../assets/img/addPlant/spinach.png'),
   },
+  {
+    id: '5',
+    name: 'Pimientos Pequeños',
+    image: require('../../assets/img/addPlant/smallPeppers.png'),
+  },
+  {
+    id: '6',
+    name: 'Menta',
+    image: require('../../assets/img/addPlant/mint.png'),
+  }
 ];
 
 export default function AddPlantScreen() {
@@ -48,22 +58,26 @@ export default function AddPlantScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Agregar Plantas</Text>
           <Text style={styles.subtitle}>Escoge el cultivo que deseas agregar.</Text>
         </View>
 
         <View style={styles.plantsGrid}>
-          {plants.map((plant, index) => (
+          {plants.map((plant) => (
             <View key={plant.id} style={styles.plantCard}>
-              {index === 0 && (
-                <View style={styles.imageContainer}>
-                  <Image source={plant.image} style={styles.plantImage} />
-                </View>
-              )}
+              <View style={styles.imageContainer}>
+                <Image source={plant.image} style={styles.plantImage} />
+              </View>
               
-              <Text style={styles.plantName}>{plant.name}</Text>
+              <View style={styles.plantNameContainer}>
+                <Text style={styles.plantName} numberOfLines={2}>{plant.name}</Text>
+              </View>
               
               <TouchableOpacity
                 style={[
@@ -83,22 +97,22 @@ export default function AddPlantScreen() {
             Escoge tus cultivos favoritos, agrégalos y empieza a ver crecer tu progreso. Una vez añadidos, podrás consultarlos siempre en tu historial.
           </Text>
         </View>
-      </ScrollView>
 
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[
-            styles.confirmButton,
-            selectedPlants.length === 0 && styles.confirmButtonDisabled
-          ]}
-          onPress={handleConfirmSelection}
-          disabled={selectedPlants.length === 0}
-        >
-          <Text style={styles.confirmButtonText}>
-            Confirmar Selección ({selectedPlants.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity
+            style={[
+              styles.confirmButton,
+              selectedPlants.length === 0 && styles.confirmButtonDisabled
+            ]}
+            onPress={handleConfirmSelection}
+            disabled={selectedPlants.length === 0}
+          >
+            <Text style={styles.confirmButtonText}>
+              Confirmar Selección ({selectedPlants.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -110,16 +124,18 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
   },
   header: {
-    marginTop: 20,
+    marginTop: 12,
     marginBottom: 30,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#000',
     marginBottom: 8,
   },
   subtitle: {
@@ -135,11 +151,13 @@ const styles = StyleSheet.create({
   },
   plantCard: {
     width: '48%',
+    height: 225,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
     alignItems: 'center',
+    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -156,26 +174,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
     overflow: 'hidden',
   },
   plantImage: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 80,
     borderRadius: 30,
+  },
+  plantNameContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 50,
+    maxHeight: 50,
+    marginVertical: 8,
   },
   plantName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 16,
     textAlign: 'center',
   },
   addButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#10B981',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -188,7 +212,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   descriptionContainer: {
-    marginBottom: 30,
+    marginBottom: 24,
     paddingHorizontal: 10,
   },
   descriptionText: {
@@ -198,12 +222,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bottomContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#F9FAFB',
+    paddingBottom: 30,
+    marginTop: 8,
   },
   confirmButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#000',
     borderRadius: 25,
     paddingVertical: 16,
     alignItems: 'center',

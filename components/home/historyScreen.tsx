@@ -1,55 +1,63 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Pencil, Trash } from 'lucide-react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../lib/supabase'
 
-interface Plant {
-  id: string;
-  name: string;
-  image: any;
-  harvestDays: number;
-  progress: number;
-  plantDate: string;
-  estimatedHarvestDate: string;
+type PlantingRecord = {
+  id: string
+  plant_name: string
+  quantity: number
+  description?: string | null
+  planted_at: string
 }
 
-const plants: Plant[] = [
-  {
-    id: '1',
-    name: 'Lechuga',
-    image: require('../../assets/img/plant.png'),
-    harvestDays: 45,
-    progress: 0.6, // 60% progress
-    plantDate: '14/07/2025',
-    estimatedHarvestDate: '12/09/2025',
-  },
-  {
-    id: '2',
-    name: 'Frijol',
-    image: require('../../assets/img/plant.png'),
-    harvestDays: 60,
-    progress: 0.4, // 40% progress
-    plantDate: '29/06/2025',
-    estimatedHarvestDate: '27/09/2025',
-  },
-  {
-    id: '3',
-    name: 'Tomate',
-    image: require('../../assets/img/plant.png'),
-    harvestDays: 70,
-    progress: 0.1, // 10% progress
-    plantDate: '24/07/2025',
-    estimatedHarvestDate: '07/10/2025',
-  },
-];
-
 export default function HistoryScreen() {
+  const [records, setRecords] = useState<PlantingRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // Mapa de nombres de plantas a imágenes locales
+  const plantImages: Record<string, any> = {
+    'lechuga': require('../../assets/img/addPlant/lettuce.png'),
+    'zanahoria': require('../../assets/img/addPlant/carrot.png'),
+    'fresas': require('../../assets/img/addPlant/strawberry.png'),
+    'acelga': require('../../assets/img/addPlant/spinach.png'),
+    'pimientos pequeños': require('../../assets/img/addPlant/smallPeppers.png'),
+    'menta': require('../../assets/img/addPlant/mint.png'),
+  }
+
+  const getPlantImage = (name?: string) => {
+    const key = (name || '').toLowerCase().trim()
+    return plantImages[key] ?? require('../../assets/img/plant.png')
+  }
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      setErrorMsg(null)
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) {
+        setErrorMsg('No hay usuario autenticado')
+        setLoading(false)
+        return
+      }
+      const { data, error } = await supabase
+        .from('plantings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('planted_at', { ascending: false })
+      if (error) {
+        setErrorMsg(error.message)
+      } else {
+        setRecords(data || [])
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   const handleEdit = (plantId: string) => {
     console.log('Edit plant:', plantId);
   };
@@ -83,9 +91,35 @@ export default function HistoryScreen() {
           </Text>
         </View>
 
+        {loading && (
+          <Text style={{ color: '#6B7280', textAlign: 'center' }}>Cargando...</Text>
+        )}
+        {errorMsg && (
+          <Text style={{ color: '#6B7280', textAlign: 'center' }}>No, tienes plantas en tu huerto.</Text>
+        )}
+
         {/* Plants List */}
         <View style={styles.plantsList}>
-          {plants.map((plant) => (
+          {records.map((rec) => {
+            const plantedAt = new Date(rec.planted_at)
+            const harvestDays = 60
+            const estimatedHarvest = new Date(plantedAt.getTime() + harvestDays * 24 * 60 * 60 * 1000)
+            const now = new Date()
+            const elapsedDays = Math.max(0, Math.floor((now.getTime() - plantedAt.getTime()) / (24 * 60 * 60 * 1000)))
+            const progress = Math.min(1, elapsedDays / harvestDays)
+            const formatDate = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+            const plant = {
+              id: rec.id,
+              name: rec.plant_name,
+              image: getPlantImage(rec.plant_name),
+              harvestDays,
+              progress,
+              plantDate: formatDate(plantedAt),
+              estimatedHarvestDate: formatDate(estimatedHarvest),
+              quantity: rec.quantity,
+            }
+
+            return (
             <View key={plant.id} style={styles.plantCard}>
               {/* Plant Header */}
               <View style={styles.plantHeader}>
@@ -93,9 +127,8 @@ export default function HistoryScreen() {
                   <Image source={plant.image} style={styles.plantImage} />
                   <View style={styles.plantDetails}>
                     <Text style={styles.plantName}>{plant.name}</Text>
-                    <Text style={styles.harvestInfo}>
-                      Cosecha en <Text style={styles.harvestDays}>{plant.harvestDays} días</Text>
-                    </Text>
+                    <Text style={styles.harvestInfo}>Cantidad: <Text style={styles.harvestDays}>{plant.quantity}</Text></Text>
+                    <Text style={styles.harvestInfo}>Cosecha en <Text style={styles.harvestDays}>{plant.harvestDays} días</Text></Text>
                   </View>
                 </View>
                 
@@ -105,13 +138,13 @@ export default function HistoryScreen() {
                     style={styles.actionButton}
                     onPress={() => handleEdit(plant.id)}
                   >
-                    <Text style={styles.actionButtonText}>✏️</Text>
+                  <Pencil size={18} color="#111827" />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleDelete(plant.id)}
                   >
-                    <Text style={styles.actionButtonText}>🗑️</Text>
+                  <Trash size={18} color="#111827" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -131,7 +164,7 @@ export default function HistoryScreen() {
                 </View>
               </View>
             </View>
-          ))}
+          )})}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -267,5 +300,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#1F2937',
-  },
+  }
 });

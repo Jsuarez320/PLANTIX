@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../lib/supabase'
+import PlantDetailsModal from './PlantDetailsModal'
 
 interface Plant {
   id: string;
@@ -43,18 +45,46 @@ const plants: Plant[] = [
 
 export default function AddPlantScreen() {
   const [selectedPlants, setSelectedPlants] = useState<string[]>([]);
+  const [modalVisible, setModalVisible] = useState(false)
 
-  const togglePlantSelection = (plantId: string) => {
-    setSelectedPlants(prev => 
-      prev.includes(plantId) 
-        ? prev.filter(id => id !== plantId)
-        : [...prev, plantId]
-    );
-  };
+  const primaryPlantName = useMemo(() => {
+    const id = selectedPlants[0]
+    const found = plants.find(p => p.id === id)
+    return found?.name
+  }, [selectedPlants])
 
-  const handleConfirmSelection = () => {
-    console.log('Selected plants:', selectedPlants);
-  };
+  const handleModalConfirm = async (payload: { quantity: number; description?: string }) => {
+    if (!primaryPlantName) {
+      setModalVisible(false)
+      return
+    }
+
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) {
+      console.warn('No hay usuario autenticado')
+      setModalVisible(false)
+      return
+    }
+
+    const { error } = await supabase
+      .from('plantings')
+      .insert({
+        user_id: userId,
+        plant_name: primaryPlantName,
+        quantity: payload.quantity,
+        description: payload.description ?? null,
+      })
+
+    if (error) {
+      console.error('Error guardando siembra:', error.message)
+    } else {
+      // Limpio selección y cierro modal
+      setSelectedPlants([])
+    }
+
+    setModalVisible(false)
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -65,12 +95,20 @@ export default function AddPlantScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Agregar Plantas</Text>
-          <Text style={styles.subtitle}>Escoge el cultivo que deseas agregar.</Text>
+          <Text style={styles.subtitle}>Escoge tus cultivos favoritos, agrégalos y empieza a ver crecer tu progreso. Una vez añadidos, podrás consultarlos siempre en tu Huerto</Text>
         </View>
 
         <View style={styles.plantsGrid}>
           {plants.map((plant) => (
-            <View key={plant.id} style={styles.plantCard}>
+            <TouchableOpacity
+              key={plant.id}
+              style={styles.plantCard}
+              activeOpacity={0.85}
+              onPress={() => {
+                setSelectedPlants([plant.id])
+                setModalVisible(true)
+              }}
+            >
               <View style={styles.imageContainer}>
                 <Image source={plant.image} style={styles.plantImage} />
               </View>
@@ -84,35 +122,25 @@ export default function AddPlantScreen() {
                   styles.addButton,
                   selectedPlants.includes(plant.id) && styles.addButtonSelected
                 ]}
-                onPress={() => togglePlantSelection(plant.id)}
+                onPress={() => {
+                  // Seleccionar esta planta y abrir el modal
+                  setSelectedPlants([plant.id])
+                  setModalVisible(true)
+                }}
               >
                 <Text style={styles.addButtonText}>+</Text>
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.descriptionText}>
-            Escoge tus cultivos favoritos, agrégalos y empieza a ver crecer tu progreso. Una vez añadidos, podrás consultarlos siempre en tu historial.
-          </Text>
-        </View>
-
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              selectedPlants.length === 0 && styles.confirmButtonDisabled
-            ]}
-            onPress={handleConfirmSelection}
-            disabled={selectedPlants.length === 0}
-          >
-            <Text style={styles.confirmButtonText}>
-              Confirmar Selección ({selectedPlants.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
+      <PlantDetailsModal
+        visible={modalVisible}
+        plantName={primaryPlantName}
+        onCancel={() => setModalVisible(false)}
+        onConfirm={handleModalConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -129,14 +157,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    marginTop: 12,
+    marginTop: 18,
     marginBottom: 30,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
@@ -210,34 +238,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
-  },
-  descriptionContainer: {
-    marginBottom: 24,
-    paddingHorizontal: 10,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  bottomContainer: {
-    paddingBottom: 30,
-    marginTop: 8,
-  },
-  confirmButton: {
-    backgroundColor: '#000',
-    borderRadius: 25,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+  }  
 });

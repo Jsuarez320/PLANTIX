@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase'
-import PlantDetailsModal from './PlantDetailsModal'
+import PlantDetailsModal from './modal/PlantDetailsModal'
 
 interface Plant {
   id: string;
@@ -73,7 +73,6 @@ export default function AddPlantScreen() {
         user_id: userId,
         plant_name: primaryPlantName,
         quantity: payload.quantity,
-        description: payload.description ?? null,
       })
 
     if (error) {

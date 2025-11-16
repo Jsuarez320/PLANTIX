@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Pencil, Trash } from 'lucide-react-native'
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Trash } from 'lucide-react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase'
+// Edit UI removida
 
 type PlantingRecord = {
   id: string
@@ -13,9 +14,18 @@ type PlantingRecord = {
 }
 
 export default function HistoryScreen() {
+  const insets = useSafeAreaInsets()
   const [records, setRecords] = useState<PlantingRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Estado de edición removido
+
+  // Actualiza el "día del sistema" para recalcular progreso de cosecha
+  const [nowMidnightMs, setNowMidnightMs] = useState<number>(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  })
 
   // Mapa de nombres de plantas a imágenes locales
   const plantImages: Record<string, any> = {
@@ -27,6 +37,16 @@ export default function HistoryScreen() {
     'menta': require('../../assets/img/addPlant/mint.png'),
   }
 
+  // Días de cosecha por planta (valores aproximados)
+  const harvestDaysByPlant: Record<string, number> = {
+    'lechuga': 45,
+    'zanahoria': 75,
+    'fresas': 90,
+    'acelga': 50,
+    'pimientos pequeños': 80,
+    'menta': 30,
+  }
+
   const getPlantImage = (name?: string) => {
     const key = (name || '').toLowerCase().trim()
     return plantImages[key] ?? require('../../assets/img/plant.png')
@@ -36,8 +56,15 @@ export default function HistoryScreen() {
     const load = async () => {
       setLoading(true)
       setErrorMsg(null)
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData.user?.id
+      // Usa getSession y maneja errores de refresh token inválido
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) {
+        // Si el refresh token es inválido, cierra sesión para limpiar estado
+        if (sessionError.message?.toLowerCase().includes('refresh token')) {
+          await supabase.auth.signOut()
+        }
+      }
+      const userId = sessionData?.session?.user?.id
       if (!userId) {
         setErrorMsg('No hay usuario autenticado')
         setLoading(false)
@@ -58,13 +85,62 @@ export default function HistoryScreen() {
     load()
   }, [])
 
-  const handleEdit = (plantId: string) => {
-    console.log('Edit plant:', plantId);
-  };
+  // Mantén sincronizado el estado ante cambios de autenticación
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Si el usuario cambia (login/logout), recarga o limpia registros
+      if (!session?.user) {
+        setRecords([])
+      }
+    })
+    return () => {
+      listener.subscription?.unsubscribe?.()
+    }
+  }, [])
+
+  // Ticker: re-evalúa el día actual (a medianoche cambia automáticamente)
+  useEffect(() => {
+    const updateNow = () => {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      setNowMidnightMs(d.getTime())
+    }
+    updateNow()
+    // cada hora es suficiente; al pasar la medianoche, se actualizará
+    const id = setInterval(updateNow, 60 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Handler de edición removido
 
   const handleDelete = (plantId: string) => {
-    console.log('Delete plant:', plantId);
-  };
+    const rec = records.find(r => r.id === plantId)
+    const plantName = rec?.plant_name ?? 'esta siembra'
+    Alert.alert(
+      'Eliminar siembra',
+      `¿Seguro que deseas eliminar ${plantName}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('plantings')
+              .delete()
+              .eq('id', plantId)
+            if (error) {
+              Alert.alert('Error', error.message)
+              return
+            }
+            setRecords(prev => prev.filter(r => r.id !== plantId))
+          },
+        },
+      ]
+    )
+  }
+
+  // Confirmación de edición removida (RLS no permite UPDATE)
 
   const renderProgressBar = (progress: number) => {
     return (
@@ -81,11 +157,18 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 12) + 64 + 24 }}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Historial de Cultivo</Text>
+          <Text style={styles.title}>Tu Huerto</Text>
           <Text style={styles.subtitle}>
             Sigue el progreso de siembra y cosecha de tus plantas.
           </Text>
@@ -94,7 +177,7 @@ export default function HistoryScreen() {
         {loading && (
           <Text style={{ color: '#6B7280', textAlign: 'center' }}>Cargando...</Text>
         )}
-        {errorMsg && (
+        {!loading && records.length === 0 && (
           <Text style={{ color: '#6B7280', textAlign: 'center' }}>No, tienes plantas en tu huerto.</Text>
         )}
 
@@ -102,10 +185,13 @@ export default function HistoryScreen() {
         <View style={styles.plantsList}>
           {records.map((rec) => {
             const plantedAt = new Date(rec.planted_at)
-            const harvestDays = 60
-            const estimatedHarvest = new Date(plantedAt.getTime() + harvestDays * 24 * 60 * 60 * 1000)
-            const now = new Date()
-            const elapsedDays = Math.max(0, Math.floor((now.getTime() - plantedAt.getTime()) / (24 * 60 * 60 * 1000)))
+            const key = (rec.plant_name || '').toLowerCase().trim()
+            const harvestDays = harvestDaysByPlant[key] ?? 60
+            const msPerDay = 24 * 60 * 60 * 1000
+            const plantedMidnight = new Date(plantedAt)
+            plantedMidnight.setHours(0, 0, 0, 0)
+            const estimatedHarvest = new Date(plantedMidnight.getTime() + harvestDays * msPerDay)
+            const elapsedDays = Math.max(0, Math.floor((nowMidnightMs - plantedMidnight.getTime()) / msPerDay))
             const progress = Math.min(1, elapsedDays / harvestDays)
             const formatDate = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
             const plant = {
@@ -132,14 +218,8 @@ export default function HistoryScreen() {
                   </View>
                 </View>
                 
-                {/* Action Buttons */}
+                {/* Botones de acción: solo eliminar */}
                 <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleEdit(plant.id)}
-                  >
-                  <Pencil size={18} color="#111827" />
-                  </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleDelete(plant.id)}
@@ -166,8 +246,9 @@ export default function HistoryScreen() {
             </View>
           )})}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

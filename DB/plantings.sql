@@ -4,7 +4,6 @@ create table if not exists public.plantings (
   user_id uuid not null references auth.users(id) on delete cascade,
   plant_name text not null,
   quantity integer not null check (quantity >= 0),
-  description text,
   planted_at timestamptz not null default now()
 );
 
@@ -18,6 +17,8 @@ alter table public.plantings enable row level security;
 -- Eliminar políticas existentes (si quieres recrearlas limpias)
 drop policy if exists "Select own plantings" on public.plantings;
 drop policy if exists "Insert own plantings" on public.plantings;
+drop policy if exists "Update own plantings" on public.plantings;
+drop policy if exists "Delete own plantings" on public.plantings;
 
 -- Política: Seleccionar solo registros propios
 create policy "Select own plantings"
@@ -30,3 +31,9 @@ create policy "Insert own plantings"
   on public.plantings
   for insert
   with check (auth.uid() = user_id);
+
+-- Política: Eliminar solo registros propios
+create policy "Delete own plantings"
+  on public.plantings
+  for delete
+  using (auth.uid() = user_id);

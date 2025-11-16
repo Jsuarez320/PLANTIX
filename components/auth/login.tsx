@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, TouchableWithoutFeedback, Keyboard } from 'react-native'
 import { supabase } from '../../lib/supabase'
 const googleIcon = require("../../assets/img/google.png")
 
@@ -47,7 +47,8 @@ export default function Login({ onRegister }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>
       <Text style={styles.title}>Iniciar Sesión</Text>
 
       <TextInput
@@ -92,7 +93,8 @@ export default function Login({ onRegister }: Props) {
         <Image style={styles.googleIcon} source={googleIcon} />
         <Text style={styles.googleText}>Continuar con Google</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   )
 }
 

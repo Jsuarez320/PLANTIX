@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Modal, View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native'
+import { Modal, View, Text, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native'
 
 type Props = {
   visible: boolean
@@ -22,8 +22,9 @@ export default function PlantDetailsModal({ visible, plantName, onCancel, onConf
 
   return (
     <Modal visible={visible} animationType="fade" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.overlay}>
+          <View style={styles.card}>
           <Text style={styles.title}>Detalles de Siembra</Text>
           <Text style={styles.subtitle}>Estás agregando: <Text style={styles.plantName}>{plantName ?? '–'}</Text></Text>
 
@@ -49,8 +50,9 @@ export default function PlantDetailsModal({ visible, plantName, onCancel, onConf
               <Text style={styles.confirmText}>Confirmar</Text>
             </TouchableOpacity>
           </View>
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   )
 }

@@ -1,6 +1,6 @@
 import React from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { View, Text, StyleSheet, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native'
 import { supabase } from '../../lib/supabase'
 
 type Props = {
@@ -9,6 +9,7 @@ type Props = {
 
 export default function HomeScreen({ email }: Props) {
   const [displayName, setDisplayName] = React.useState<string>('Usuario')
+  const insets = useSafeAreaInsets()
 
   React.useEffect(() => {
     const getUserName = async () => {
@@ -34,8 +35,13 @@ export default function HomeScreen({ email }: Props) {
   }, [email])
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, 12) + 64 + 24 }]}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.headerRow}>
           <Text style={styles.greeting}>Hola {displayName}!</Text>
           <Text style={styles.subtitle}>Explora tus plantas y su estado actual</Text>
@@ -67,8 +73,9 @@ export default function HomeScreen({ email }: Props) {
         </View>
 
         <View style={{ height: 24 }} />
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   )
 }
 
@@ -79,7 +86,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
   },
   headerRow: {
     paddingBottom: 8,

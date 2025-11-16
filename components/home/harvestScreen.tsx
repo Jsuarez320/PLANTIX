@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
+import { Trash } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import HarvestRegisterModal from './modal/HarvestRegisterModal';
 import { supabase } from '../../lib/supabase';
 
 type HarvestItem = {
+  id: string;
   name: string;
   quantityKg: number;
-  dateISO: string; // YYYY-MM-DD
+  dateISO: string;
   image: any;
 };
 
@@ -16,9 +18,17 @@ type Planting = { id: string; plant_name: string };
 // Datos de ejemplo eliminados; el listado inicia vacío
 
 const cropImages: Record<string, any> = {
-  Tomate: require('../../assets/img/plant.png'),
-  Lechuga: require('../../assets/img/addPlant/lettuce.png'),
-  Frijol: require('../../assets/img/plant.png'),
+  'lechuga': require('../../assets/img/addPlant/lettuce.png'),
+  'zanahoria': require('../../assets/img/addPlant/carrot.png'),
+  'fresas': require('../../assets/img/addPlant/strawberry.png'),
+  'acelga': require('../../assets/img/addPlant/spinach.png'),
+  'pimientos pequeños': require('../../assets/img/addPlant/smallPeppers.png'),
+  'menta': require('../../assets/img/addPlant/mint.png'),
+}
+
+const getCropImage = (name?: string) => {
+  const key = (name || '').toLowerCase().trim()
+  return cropImages[key] ?? require('../../assets/img/plant.png')
 }
 
 const monthNamesEs = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
@@ -42,12 +52,15 @@ export default function HarvestScreen() {
   const [registerVisible, setRegisterVisible] = useState(false)
   const [plantings, setPlantings] = useState<Planting[]>([])
   const [cropOptions, setCropOptions] = useState<string[]>([])
+  const [initialCrop, setInitialCrop] = useState<string | null>(null)
+  const [maxAvailable, setMaxAvailable] = useState<number | null>(null)
+  const [initialPlantingId, setInitialPlantingId] = useState<string | null>(null)
 
   // Cargar cosechas del usuario
   const loadHarvests = async () => {
     const { data, error } = await supabase
       .from('harvests')
-      .select('plant_name, weight_kg, harvested_at')
+      .select('id, plant_name, weight_kg, harvested_at')
       .order('harvested_at', { ascending: false })
 
     if (error) {
@@ -56,11 +69,12 @@ export default function HarvestScreen() {
     }
 
     const items: HarvestItem[] = (data || []).map((h: any) => {
+      const id = String(h.id)
       const name = h.plant_name as string
       const quantityKg = Number(h.weight_kg) || 0
       const dateISO = new Date(h.harvested_at as string).toISOString().slice(0, 10)
-      const image = cropImages[name] || require('../../assets/img/plant.png')
-      return { name, quantityKg, dateISO, image }
+      const image = getCropImage(name)
+      return { id, name, quantityKg, dateISO, image }
     })
 
     setHarvests(items)
@@ -96,6 +110,42 @@ export default function HarvestScreen() {
     setRegisterVisible(true)
   }
 
+  React.useEffect(() => {
+    const payload = (globalThis as any).__openHarvestRegister as { plantingId?: string; cropName?: string; maxPlantsAvailable?: number } | undefined
+    if (payload?.cropName) {
+      setInitialCrop(payload.cropName)
+      if (typeof payload.maxPlantsAvailable === 'number') setMaxAvailable(payload.maxPlantsAvailable)
+      if (payload.plantingId) setInitialPlantingId(payload.plantingId)
+      setRegisterVisible(true)
+      ;(globalThis as any).__openHarvestRegister = undefined
+    }
+  })
+
+  const handleDeleteHarvest = (harvestId: string, name: string) => {
+    Alert.alert(
+      'Eliminar cosecha',
+      `¿Seguro que deseas eliminar la cosecha de ${name}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('harvests')
+              .delete()
+              .eq('id', harvestId)
+            if (error) {
+              Alert.alert('Error', error.message)
+              return
+            }
+            setHarvests(prev => prev.filter(h => h.id !== harvestId))
+          },
+        },
+      ]
+    )
+  }
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.container}>
@@ -124,16 +174,11 @@ export default function HarvestScreen() {
           </View>
         </View>
 
-        {/* CTA Button */}
-        <TouchableOpacity style={styles.registerButton} onPress={handleRegisterNewHarvest}>
-          <Text style={styles.registerButtonText}>+ Registrar Nueva Cosecha</Text>
-        </TouchableOpacity>
-
         {/* Recent Harvests */}
         <Text style={styles.sectionTitle}>Cosechas Recientes</Text>
         <View>
-          {harvests.map((h, idx) => (
-            <View key={idx} style={styles.harvestItem}>
+          {harvests.map((h) => (
+            <View key={h.id} style={styles.harvestItem}>
               <View style={styles.harvestLeft}>
                 <Image source={h.image} style={styles.harvestImage} />
                 <View>
@@ -141,18 +186,25 @@ export default function HarvestScreen() {
                   <Text style={styles.harvestDate}>{formatEsDate(h.dateISO)}</Text>
                 </View>
               </View>
-              <Text style={styles.harvestQty}>{h.quantityKg} kg</Text>
+              <View style={styles.harvestRight}>
+                <Text style={styles.harvestQty}>{h.quantityKg} kg</Text>
+                <TouchableOpacity style={styles.harvestDelete} activeOpacity={0.7} onPress={() => handleDeleteHarvest(h.id, h.name)}>
+                  <Trash size={18} color="#111827" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
         </ScrollView>
         <HarvestRegisterModal
-        visible={registerVisible}
-        cropOptions={cropOptions}
-        onClose={() => setRegisterVisible(false)}
+          visible={registerVisible}
+          initialCrop={initialCrop ?? undefined}
+          maxPlantsAvailable={maxAvailable ?? undefined}
+          cropOptions={cropOptions}
+          onClose={() => setRegisterVisible(false)}
         onSave={async ({ name, quantityKg, quantityPlants, dateISO }) => {
-          // Buscar la siembra correspondiente por nombre (más reciente)
-          const planting = plantings.find(p => p.plant_name === name)
+          const byId = initialPlantingId ? plantings.find(p => p.id === initialPlantingId) : undefined
+          const planting = byId ?? plantings.find(p => p.plant_name === name)
           if (!planting) {
             console.warn('No se encontró una siembra para', name)
             return
@@ -177,24 +229,57 @@ export default function HarvestScreen() {
             return
           }
 
+          // Eliminar siembra (las cosechas permanecen por ON DELETE SET NULL)
+          const { error: delError } = await supabase
+            .from('plantings')
+            .delete()
+            .eq('id', planting.id)
+
+          if (delError) {
+            console.warn('Error eliminando siembra', delError.message)
+          } else {
+            setPlantings(prev => prev.filter(p => p.id !== planting.id))
+          }
+
           // Refrescar listado desde BD para garantizar persistencia
           await loadHarvests()
           setRegisterVisible(false)
         }}
-        />
+      />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  scrollView: { flex: 1, paddingHorizontal: 20 },
-  header: { marginTop: 20, marginBottom: 30 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#6B7280', lineHeight: 24 },
-
-  statsRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F9FAFB' 
+  },
+  scrollView: { 
+    flex: 1, 
+    paddingHorizontal: 20 
+  },
+  header: { 
+    marginTop: 20, 
+    marginBottom: 30 
+  },
+  title: { 
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    color: '#1F2937', 
+    marginBottom: 8 
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: '#6B7280', 
+    lineHeight: 24 
+  },
+  statsRow: { 
+    flexDirection: 'row', 
+    gap: 16, 
+    marginBottom: 16 
+  },
   statCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -206,22 +291,27 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  statLabel: { fontSize: 14, color: '#6B7280', marginBottom: 8 },
-  statValue: { fontSize: 24, fontWeight: 'bold', color: '#1F2937' },
-  statUnit: { fontSize: 16, fontWeight: '600', color: '#6B7280' },
-
-  registerButton: {
-    backgroundColor: '#000000',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
+  statLabel: { 
+    fontSize: 14, 
+    color: '#6B7280', 
+    marginBottom: 8 
+  },    
+  statValue: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    color: '#1F2937' 
   },
-  registerButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-
-  sectionTitle: { fontSize: 22, fontWeight: '700', color: '#1F2937', marginBottom: 16 },
-
+  statUnit: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#6B7280' 
+  },
+  sectionTitle: { 
+    fontSize: 22, 
+    fontWeight: '700', 
+    color: '#1F2937', 
+    marginBottom: 16 
+  },
   harvestItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -236,9 +326,42 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  harvestLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  harvestImage: { width: 56, height: 56, borderRadius: 8 },
-  harvestName: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
-  harvestDate: { fontSize: 12, color: '#6B7280', marginTop: 4 },
-  harvestQty: { fontSize: 16, fontWeight: '700', color: '#10B981' },
+  harvestLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    gap: 12 
+  },
+  harvestImage: { 
+    width: 56, 
+    height: 56, 
+    borderRadius: 8 
+  },
+  harvestName: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#1F2937' 
+  },
+  harvestDate: { 
+    fontSize: 12, 
+    color: '#6B7280', 
+    marginTop: 4 
+  },
+  harvestRight: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12 
+  },
+  harvestQty: { 
+    fontSize: 16, 
+    fontWeight: '700', 
+    color: '#10B981' 
+  },
+  harvestDelete: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 })

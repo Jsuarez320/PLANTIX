@@ -20,6 +20,15 @@ export default function BottomTabs({ sessionEmail }: BottomTabsProps) {
   const [selected, setSelected] = useState<MenuKey>('home')
   const insets = useSafeAreaInsets()
 
+  React.useEffect(() => {
+    ;(globalThis as any).__setBottomTab = (key: MenuKey) => setSelected(key)
+    return () => {
+      if ((globalThis as any).__setBottomTab) {
+        ;(globalThis as any).__setBottomTab = undefined
+      }
+    }
+  }, [])
+
   const renderContent = () => {
     switch (selected) {
       case 'home':

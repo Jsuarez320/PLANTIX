@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
 import { Trash } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase'
@@ -156,6 +156,19 @@ export default function HistoryScreen() {
     );
   };
 
+  const readyRecords = records.filter((rec) => {
+    const plantedAt = new Date(rec.planted_at)
+    const key = (rec.plant_name || '').toLowerCase().trim()
+    const harvestDays = harvestDaysByPlant[key] ?? 60
+    const msPerDay = 24 * 60 * 60 * 1000
+    const plantedMidnight = new Date(plantedAt)
+    plantedMidnight.setHours(0, 0, 0, 0)
+    const elapsedDays = Math.max(0, Math.floor((nowMidnightMs - plantedMidnight.getTime()) / msPerDay))
+    return elapsedDays >= harvestDays
+  })
+
+  const ongoingRecords = records.filter((rec) => !readyRecords.some(r => r.id === rec.id))
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.container}>
@@ -174,6 +187,37 @@ export default function HistoryScreen() {
           </Text>
         </View>
 
+        {readyRecords.length > 0 && (
+          <View style={styles.readySection}>
+            <Text style={styles.readyTitle}>Listo para Cosechar</Text>
+            {readyRecords.slice(0, 5).map((r) => (
+              <View key={r.id} style={styles.readyCard}>
+                <View style={styles.readyAccent} />
+                <Image source={getPlantImage(r.plant_name)} style={styles.readyImage} />
+                <View style={styles.readyInfo}>
+                  <Text style={styles.readyName}>{r.plant_name}</Text>
+                  <Text style={styles.readyQty}>Cantidad: <Text style={styles.readyQtyValue}>{r.quantity}</Text></Text>
+                  <Text style={styles.readyStatus}>¡Cosecha lista!</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.readyButton}
+                  onPress={() => {
+                    ;(globalThis as any).__openHarvestRegister = { plantingId: r.id, cropName: r.plant_name, maxPlantsAvailable: r.quantity }
+                    const setTab = (globalThis as any).__setBottomTab as ((k: any) => void) | undefined
+                    setTab?.('harvest')
+                  }}
+                >
+                  <Text style={styles.readyButtonText}>Registrar</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {ongoingRecords.length > 0 && (
+          <Text style={styles.progressTitle}>En Progreso</Text>
+        )}
+
         {loading && (
           <Text style={{ color: '#6B7280', textAlign: 'center' }}>Cargando...</Text>
         )}
@@ -181,9 +225,8 @@ export default function HistoryScreen() {
           <Text style={{ color: '#6B7280', textAlign: 'center' }}>No, tienes plantas en tu huerto.</Text>
         )}
 
-        {/* Plants List */}
         <View style={styles.plantsList}>
-          {records.map((rec) => {
+          {ongoingRecords.map((rec) => {
             const plantedAt = new Date(rec.planted_at)
             const key = (rec.plant_name || '').toLowerCase().trim()
             const harvestDays = harvestDaysByPlant[key] ?? 60
@@ -364,6 +407,97 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  progressTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  readySection: {
+    marginBottom: 16,
+  },
+  readyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  readyCard: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  readyAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 8,
+    bottom: 8,
+    width: 6,
+    backgroundColor: '#10B981',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  readyImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  readyInfo: {
+    flex: 1,
+  },
+  readyName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  readyQty: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  readyQtyValue: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  readyStatus: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '700',
+  },
+  readyButton: {
+    backgroundColor: '#10B981',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  readyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   datesContainer: {
     flexDirection: 'row',

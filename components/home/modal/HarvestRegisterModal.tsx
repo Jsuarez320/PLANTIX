@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
-import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native'
+import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, TouchableWithoutFeedback, Keyboard, Alert } from 'react-native'
 
 type SavePayload = { name: string; quantityKg: number; quantityPlants: number; dateISO: string; notes?: string }
 
 type Props = {
   visible: boolean
   cropOptions: string[]
+  initialCrop?: string
+  maxPlantsAvailable?: number
   onClose: () => void
   onSave: (payload: SavePayload) => void
 }
@@ -29,7 +31,7 @@ const formatDdMmYyyyInput = (raw: string) => {
   return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`
 }
 
-export default function HarvestRegisterModal({ visible, cropOptions, onClose, onSave }: Props) {
+export default function HarvestRegisterModal({ visible, cropOptions, initialCrop, maxPlantsAvailable, onClose, onSave }: Props) {
   const [selectOpen, setSelectOpen] = useState(false)
   const [selectedCrop, setSelectedCrop] = useState<string | null>(null)
   const [quantityText, setQuantityText] = useState('')
@@ -46,6 +48,12 @@ export default function HarvestRegisterModal({ visible, cropOptions, onClose, on
     setDateText('')
   }
 
+  React.useEffect(() => {
+    if (visible && initialCrop) {
+      setSelectedCrop(initialCrop)
+    }
+  }, [visible, initialCrop])
+
   const handleCancel = () => {
     reset()
     onClose()
@@ -57,6 +65,10 @@ export default function HarvestRegisterModal({ visible, cropOptions, onClose, on
     if (!isFinite(qty) || qty <= 0) return
     const qtyPlants = parseInt(quantityPlantsText, 10)
     if (!isFinite(qtyPlants) || qtyPlants <= 0) return
+    if (typeof maxPlantsAvailable === 'number' && qtyPlants > maxPlantsAvailable) {
+      Alert.alert('Cantidad inválida', `Tienes disponibles ${maxPlantsAvailable} plantas para cosechar`)
+      return
+    }
     const iso = parseDdMmYyyyToISO(dateText)
     if (!iso) return
     onSave({ name: selectedCrop, quantityKg: qty, quantityPlants: qtyPlants, dateISO: iso })

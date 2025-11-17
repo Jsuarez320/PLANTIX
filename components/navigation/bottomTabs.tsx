@@ -48,7 +48,7 @@ export default function BottomTabs({ sessionEmail }: BottomTabsProps) {
 
   const TabButton = ({ label, Icon, isActive, onPress }: { label: string; Icon: React.ElementType; isActive?: boolean; onPress?: () => void }) => (
     <Pressable style={styles.tabButton} onPress={onPress}>
-      <Icon color={isActive ? '#2ECC71' : '#9CA3AF'} size={22} strokeWidth={2} />
+      <Icon color={isActive ? '#000000' : '#9CA3AF'} size={22} strokeWidth={2} />
       <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
     </Pressable>
   )
@@ -63,7 +63,7 @@ export default function BottomTabs({ sessionEmail }: BottomTabsProps) {
           return (
             <View style={[styles.bottomBar, { paddingBottom: bottomPadding }]}>
               <View style={styles.tabGroup}>
-                <TabButton label="Home" Icon={House} isActive={selected === 'home'} onPress={() => setSelected('home')} />
+                <TabButton label="Inicio" Icon={House} isActive={selected === 'home'} onPress={() => setSelected('home')} />
                 <TabButton label="Huerto" Icon={Fence} isActive={selected === 'history'} onPress={() => setSelected('history')} />                
               </View>
 
@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
     height: 64,
     ...Platform.select({
       ios: {
+        height: 90,
         paddingBottom: 20, 
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: '#2e3eccff',
+    color: '#000000',
   },
   fab: {
     position: 'absolute',

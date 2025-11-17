@@ -15,24 +15,14 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
+        const { data: { user }, error } = await supabase.auth.getUser()
         if (error) {
-          console.warn('Error getting session:', error.message)
-          // Si hay error de refresh token, limpiamos la sesión
-          if (error.message.includes('Invalid Refresh Token') || error.message.includes('Refresh Token Not Found')) {
-            await supabase.auth.signOut()
-          }
           setSession(null)
         } else {
-          setSession(data.session)
-          // Si hay sesión, intentamos ir al tutorial cuando el nav esté listo
-          if (data.session && navigationRef.isReady()) {
+          if (user && navigationRef.isReady()) {
             navigationRef.navigate('selectPlant')
           }
         }
-      } catch (err) {
-        console.warn('Error initializing auth:', err)
-        setSession(null)
       } finally {
         setLoading(false)
       }

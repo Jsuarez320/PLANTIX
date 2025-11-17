@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../../lib/supabase'
+import { useNavigation } from '@react-navigation/native'
+import { LogOut } from 'lucide-react-native'
 
 interface UserProfile {
   username: string;
@@ -12,16 +15,17 @@ interface UserProfile {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
+  const navigation = useNavigation<any>()
   const [isEditing, setIsEditing] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
   const [profile, setProfile] = useState<UserProfile>({
-    username: 'Elkinml06',
-    plantsRegistered: 2,
-    fullName: 'Elkin Mendoza López',
-    email: 'emendoza264@unab.edu.co',
-    phone: '3124038107',
+    username: '',
+    plantsRegistered: 0,
+    fullName: '',
+    email: '',
+    phone: '',
   });
 
   const handleEdit = () => {
@@ -37,12 +41,79 @@ export default function ProfileScreen() {
     setNewPassword('');
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigation.navigate('welcome')
+  }
+
   const updateProfile = (field: keyof UserProfile, value: string | number) => {
     setProfile(prev => ({
       ...prev,
       [field]: value
     }));
   };
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) throw error
+        if (user) {
+          const meta: Record<string, any> = user.user_metadata || {}
+          const email = user.email ?? ''
+          const phone = (user as any).phone ?? meta.phone ?? ''
+          const displayName = meta.name ?? meta.full_name ?? meta.username ?? (email ? email.split('@')[0] : '')
+          const fullName = meta.full_name ?? meta.name ?? ''
+          const { count } = await supabase
+            .from('plantings')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+          setProfile(prev => ({
+            ...prev,
+            username: displayName || prev.username,
+            fullName: prev.fullName || fullName,
+            email: email || prev.email,
+            phone: prev.phone || phone,
+            plantsRegistered: typeof count === 'number' ? count : prev.plantsRegistered,
+          }))
+        }
+      } catch (e: any) {
+        const msg: string = e?.message || ''
+        if (msg.includes('Invalid Refresh Token') || msg.includes('Refresh Token Not Found')) {
+          await supabase.auth.signOut({ scope: 'local' })
+          navigation.navigate('welcome')
+        }
+      }
+    }
+    load()
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user
+      if (user) {
+        const meta: Record<string, any> = user.user_metadata || {}
+        const email = user.email ?? ''
+        const phone = (user as any).phone ?? meta.phone ?? ''
+        const displayName = meta.name ?? meta.full_name ?? meta.username ?? (email ? email.split('@')[0] : '')
+        const fullName = meta.full_name ?? meta.name ?? ''
+        setProfile(prev => ({
+          ...prev,
+          username: displayName || prev.username,
+          fullName: fullName || prev.fullName,
+          email: email || prev.email,
+          phone: phone || prev.phone,
+        }))
+        ;(async () => {
+          const { count } = await supabase
+            .from('plantings')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+          setProfile(prev => ({ ...prev, plantsRegistered: typeof count === 'number' ? count : prev.plantsRegistered }))
+        })()
+      }
+    })
+    return () => {
+      listener.subscription?.unsubscribe?.()
+    }
+  }, [])
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -56,6 +127,10 @@ export default function ProfileScreen() {
         >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
+          <TouchableOpacity onPress={handleLogout} style={[styles.logoutTopButton, styles.logoutTopRight]}>
+            <LogOut size={16} color="#b91010ff" style={{ marginRight: 6 }} />
+            <Text style={styles.logoutTopText}>Cerrar sesión</Text>
+          </TouchableOpacity>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarIcon}>👤</Text>
@@ -97,18 +172,6 @@ export default function ProfileScreen() {
               editable={isEditing}
               placeholder="Correo electrónico"
               keyboardType="email-address"
-            />
-          </View>
-
-          {/* Phone */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled]}
-              value={profile.phone}
-              onChangeText={(text) => updateProfile('phone', text)}
-              editable={isEditing}
-              placeholder="Teléfono"
-              keyboardType="phone-pad"
             />
           </View>
         </View>
@@ -222,6 +285,15 @@ const styles = StyleSheet.create({
     color: '#10B981',
     fontWeight: '500',
   },
+  logoutTopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoutTopText: {
+    fontSize: 14,
+    color: '#b91010ff',
+    fontWeight: '500',
+  },
   inputContainer: {
     marginBottom: 16,
   },
@@ -251,5 +323,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  logoutTopRight: {
+    position: 'absolute',
+    right: 5,
   },
 });

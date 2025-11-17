@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, TouchableWithoutFeedback, Keyboard } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TouchableWithoutFeedback, Keyboard } from 'react-native'
 import { supabase } from '../../lib/supabase'
-const googleIcon = require("../../assets/img/google.png")
 
 type Props = { onRegister?: () => void }
 
@@ -34,17 +33,6 @@ export default function Login({ onRegister }: Props) {
     }
   }
 
-  const handleGoogle = async () => {
-    try {
-      setLoading(true)
-          const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' })
-      if (error) throw error
-    } catch (err: any) {
-      Alert.alert('Google OAuth', err.message || 'Configura los deep links para móvil (AuthSession)')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -82,17 +70,6 @@ export default function Login({ onRegister }: Props) {
           <Text style={styles.registerLink}>Registrarse</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={styles.separatorRow}>
-        <View style={styles.line} />
-        <View style={styles.circle} />
-        <View style={styles.line} />
-      </View>
-
-      <TouchableOpacity style={styles.googleButton} onPress={handleGoogle} disabled={loading}>
-        <Image style={styles.googleIcon} source={googleIcon} />
-        <Text style={styles.googleText}>Continuar con Google</Text>
-      </TouchableOpacity>
       </View>
     </TouchableWithoutFeedback>
   )
@@ -146,48 +123,5 @@ const styles = StyleSheet.create({
     registerLink: {
         color: '#1A202C',
         fontWeight: '600',
-    },
-    separator: {
-        height: 1,
-        backgroundColor: '#E2E8F0',
-        marginVertical: 16,
-    },
-    separatorRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginVertical: 16,
-    },
-    line: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#B0B7C3',
-    },
-    circle: {
-        width: 12,
-        height: 12,
-        borderRadius: 9,
-        borderWidth: 2,
-        borderColor: '#B0B7C3',
-        marginHorizontal: 12,
-    },
-    googleButton: {
-        height: 48,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-    },
-    googleIcon: {
-        width: 24,
-        height: 24,
-        marginRight: 10,
-    },
-    googleText: {
-        color: '#000',
-        fontWeight: '600',
-        fontSize: 14,
     },
 })

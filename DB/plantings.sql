@@ -1,7 +1,7 @@
--- Crear tabla si no existe
+-- Crear tabla si no existe (con FK a profiles)
 create table if not exists public.plantings (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   plant_name text not null,
   quantity integer not null check (quantity >= 0),
   planted_at timestamptz not null default now()
@@ -37,3 +37,33 @@ create policy "Delete own plantings"
   on public.plantings
   for delete
   using (auth.uid() = user_id);
+
+-- Migración idempotente: ajustar FK user_id a profiles si venía de auth.users
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.plantings'::regclass
+      and contype = 'f'
+      and conname = 'plantings_user_id_fkey'
+  ) then
+    alter table public.plantings drop constraint plantings_user_id_fkey;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint c
+    join pg_class rc on rc.oid = c.confrelid
+    join pg_namespace rn on rn.oid = rc.relnamespace
+    where c.conrelid = 'public.plantings'::regclass
+      and c.contype = 'f'
+      and rc.relname = 'profiles'
+      and rn.nspname = 'public'
+  ) then
+    alter table public.plantings
+      add constraint plantings_user_id_fkey
+      foreign key (user_id) references public.profiles(id) on delete cascade;
+  end if;
+end $$;

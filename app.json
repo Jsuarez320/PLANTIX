@@ -5,11 +5,11 @@
     "scheme": "plantix",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/img/plant.png",
+    "icon": "./assets/img/hojitas.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/img/plant.png",
+      "image": "./assets/img/hojitas.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/img/plant.png",
+        "foregroundImage": "./assets/img/hojitas.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

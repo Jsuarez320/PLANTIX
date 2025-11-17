@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TouchableWithoutFeedback, Keyboard } from "react-native";
 import { supabase } from "../../lib/supabase";
+import { Eye, EyeOff } from 'lucide-react-native'
 
 type Props = { onLogin?: () => void, onRegistered?: () => void }
 
@@ -10,6 +11,7 @@ export default function Register({ onLogin, onRegistered }: Props) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
     // Verificacion
     const handleRegister = async () => {
@@ -67,13 +69,22 @@ export default function Register({ onLogin, onRegistered }: Props) {
                 onChangeText={setEmail}
             />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
+            <View style={styles.inputWrap}>
+                <TextInput
+                    style={styles.inputInner}
+                    placeholder="Password"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                />
+                <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(v => !v)}>
+                    {showPassword ? (
+                        <EyeOff size={18} color="#6B7280" />
+                    ) : (
+                        <Eye size={18} color="#6B7280" />
+                    )}
+                </TouchableOpacity>
+            </View>
 
             <TextInput 
                 style={styles.input}
@@ -124,6 +135,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         marginBottom: 16,
         backgroundColor: '#edeff2',
+    },
+    inputWrap: {
+        height: 48,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#edeff2',
+        paddingHorizontal: 12,
+        marginBottom: 16,
+        backgroundColor: '#edeff2',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    inputInner: {
+        flex: 1,
+        color: '#111827',
+    },
+    eyeButton: {
+        paddingHorizontal: 4,
+        paddingVertical: 4,
     },
     button: {
         height: 55,

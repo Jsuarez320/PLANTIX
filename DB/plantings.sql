@@ -24,19 +24,50 @@ drop policy if exists "Delete own plantings" on public.plantings;
 create policy "Select own plantings"
   on public.plantings
   for select
-  using (auth.uid() = user_id);
+using (auth.uid() = user_id);
 
 -- Política: Insertar solo registros propios
 create policy "Insert own plantings"
   on public.plantings
   for insert
-  with check (auth.uid() = user_id);
+with check (auth.uid() = user_id);
 
 -- Política: Eliminar solo registros propios
 create policy "Delete own plantings"
   on public.plantings
   for delete
-  using (auth.uid() = user_id);
+using (auth.uid() = user_id);
+
+-- Establecer default de user_id a auth.uid() para inserciones desde el cliente
+alter table public.plantings
+  alter column user_id set default auth.uid();
+
+-- Crear perfil automáticamente para nuevos usuarios en auth.users
+create or replace function public.create_profile_for_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, updated_at)
+  values (NEW.id, now())
+  on conflict (id) do nothing;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.create_profile_for_new_user();
+
+-- Backfill de perfiles faltantes para usuarios existentes
+insert into public.profiles (id)
+select u.id
+from auth.users u
+left join public.profiles p on p.id = u.id
+where p.id is null;
 
 -- Migración idempotente: ajustar FK user_id a profiles si venía de auth.users
 do $$

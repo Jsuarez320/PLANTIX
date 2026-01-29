@@ -14,7 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jsuarez219.PLANTIX",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -30,7 +34,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b4e9e7c1-73e6-4b9a-980e-1c167b984b0e"
+        "projectId": "6d1c06b1-2ac8-4720-affc-d0efff7115c8"
       }
     }
   }

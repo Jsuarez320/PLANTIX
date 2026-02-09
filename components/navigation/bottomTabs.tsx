@@ -4,11 +4,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { House, Plus, Tractor, UserRound, Fence } from 'lucide-react-native'
 
 // Import screens
-import HomeScreen from '../home/homeScreen';
-import AddPlantScreen from '../home/addPlantScreen';
-import HistoryScreen from '../home/historyScreen';
-import HarvestScreen from '../home/harvestScreen';
-import ProfileScreen from '../home/profileScreen';
+import HomeScreen from '../pages/homeScreen';
+import AddPlantScreen from '../pages/addPlantScreen';
+import HistoryScreen from '../pages/historyScreen';
+import HarvestScreen from '../pages/harvestScreen';
+import ProfileScreen from '../pages/profileScreen';
 
 type MenuKey = 'home' | 'profile' | 'add' | 'history' | 'harvest'
 
@@ -21,10 +21,10 @@ export default function BottomTabs({ sessionEmail }: BottomTabsProps) {
   const insets = useSafeAreaInsets()
 
   React.useEffect(() => {
-    ;(globalThis as any).__setBottomTab = (key: MenuKey) => setSelected(key)
+    ; (globalThis as any).__setBottomTab = (key: MenuKey) => setSelected(key)
     return () => {
       if ((globalThis as any).__setBottomTab) {
-        ;(globalThis as any).__setBottomTab = undefined
+        ; (globalThis as any).__setBottomTab = undefined
       }
     }
   }, [])
@@ -64,7 +64,7 @@ export default function BottomTabs({ sessionEmail }: BottomTabsProps) {
             <View style={[styles.bottomBar, { paddingBottom: bottomPadding }]}>
               <View style={styles.tabGroup}>
                 <TabButton label="Inicio" Icon={House} isActive={selected === 'home'} onPress={() => setSelected('home')} />
-                <TabButton label="Huerto" Icon={Fence} isActive={selected === 'history'} onPress={() => setSelected('history')} />                
+                <TabButton label="Huerto" Icon={Fence} isActive={selected === 'history'} onPress={() => setSelected('history')} />
               </View>
 
               <View style={styles.tabGroup}>
@@ -78,7 +78,7 @@ export default function BottomTabs({ sessionEmail }: BottomTabsProps) {
         {(() => {
           return (
             <Pressable
-              style={[styles.fab, { bottom: insets.bottom + (Platform.OS === 'ios' ? 16 : 32)}]}
+              style={[styles.fab, { bottom: insets.bottom + (Platform.OS === 'ios' ? 16 : 32) }]}
               onPress={() => setSelected('add')}
               android_ripple={{ color: '#111827' }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         height: 90,
-        paddingBottom: 20, 
+        paddingBottom: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.08,
